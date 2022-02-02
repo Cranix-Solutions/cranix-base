@@ -2,6 +2,7 @@
 DATE=$( /usr/share/cranix/tools/crx_date.sh )
 cp /etc/sysconfig/cranix /etc/sysconfig/cranix-${DATE}
 sed -i s/oss-support@extis.de/support@cephalix.eu/ /etc/sysconfig/cranix
+sed -i s/oss_/crx_/ /etc/sysconfig/cranix
 sed -i s/OSS/CRANIX/g /etc/sysconfig/cranix
 EFOUND=$( gawk  '/CRANIX_SUPPORT_MAIL_URL/ { print NR } ' /etc/sysconfig/cranix )
 if [ "${EFOUND}" ]; then
@@ -10,4 +11,6 @@ if [ "${EFOUND}" ]; then
 fi
 sed -i s#https://support.extis.de/support#https://repo.cephalix.eu/api/tickets/add#    /etc/sysconfig/cranix
 sed -i s#https://support.cephalix.de/support#https://repo.cephalix.eu/api/tickets/add# /etc/sysconfig/cranix
+#Remove hard coded repo.cephalix.eu entry in hosts
+sed -i /repo.cephalix.eu/d /etc/hosts
 
