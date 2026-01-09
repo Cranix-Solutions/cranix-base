@@ -100,6 +100,10 @@ CRANIX_BACKUP_WITH_HARDLINK="no"
 ########################################################################
 
 ## Type:	string readonly
+# The internal network device of the admin server of the CRANIX.
+CRANIX_INTERNAL_DEVICE=""
+
+## Type:	string readonly
 # Network Address of the internal network.
 CRANIX_NETWORK=""
 
@@ -159,7 +163,7 @@ CRANIX_FILESERVER=""
 
 ## Type:        string readonly
 # Name of the file server of the CRANIX.
-CRANIX_FILESERVER_NETBIOSNAME=""
+CRANIX_FILESERVER_NETBIOSNAME="fileserver"
 
 ## Type:        string readonly
 # IP-address of the print server of the CRANIX.
@@ -167,7 +171,7 @@ CRANIX_PRINTSERVER=""
 
 ## Type:        string readonly
 # Name of the print server of the CRANIX.
-CRANIX_PRINTSERVER_NETBIOSNAME=""
+CRANIX_PRINTSERVER_NETBIOSNAME="printserver"
 
 ## Type:	string readonly
 # IP-address of the mail server and groupware of the CRANIX.
@@ -180,6 +184,10 @@ CRANIX_PROXY=""
 ## Type:	string readonly
 # IP-address of the backup server of the CRANIX.
 CRANIX_BACKUP_SERVER=""
+
+## Type:	string readonly
+# The default gateway of the server.
+CRANIX_SERVER_EXT_DEVICE=""
 
 ## Type:	string readonly
 # The default gateway of the server.
@@ -258,6 +266,12 @@ CRANIX_TYPE="real"
 # The name of the institute.
 CRANIX_NAME="CRANIX"
 
+## Type:        string
+## Default:
+# Users in this role must not be created in system. These exists only in DB
+# Usefull for users like parents.
+CRANIX_DB_ONLY_ROLES=""
+
 ## Type:	yesno
 ## Default:	no
 # Teachers have read rights in the home directories of  the students.
@@ -276,7 +290,7 @@ CRANIX_RESET_REGISTER_PASSWORD="no"
 ## Type:	string
 ## Default:
 # This services have be monitored.
-CRANIX_MONITOR_SERVICES="amavis apache2 cups chronyd cranix-api crx_salt_event_watcher dhcpd mariadb salt-master samba-ad samba-fileserver samba-printserver squid vsftpd xinetd"
+CRANIX_MONITOR_SERVICES="amavis apache2 cups chronyd cranix-api crx_salt_event_watcher kea-dhcp4 mariadb salt-master samba-ad samba-fileserver samba-printserver squid vsftpd xinetd"
 
 ## Type:	yesno
 ## Default:	no
@@ -386,8 +400,9 @@ CRANIX_LOGON_CONNECT_PRINTERS="yes"
 
 ## Type:        yesno
 ## Default:     yes
-# If this variable is yes the admin website allows the browser to use the saved passwords.
-CRANIX_ALLOW_SAVE_PASSWORD="no"
+# If this variable is yes then /home/software will be linked into the home directory also
+# This is only important if you want the people have acces to /home/software via cranix-cloud (webDAV).
+CRANIX_LINK_SOFTWARE="no"
 
 ## Type:        yesno
 ## Default:     no

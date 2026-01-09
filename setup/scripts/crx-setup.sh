@@ -11,7 +11,7 @@ passwd=""
 windomain=""
 
 # input variable
-passwdf=""
+passwdf="/root/passwd"
 all="no"
 samba="no"
 printserver="no"
@@ -22,12 +22,19 @@ api="no"
 postsetup="no"
 accounts="no"
 verbose="yes"
+cephalixpwf="/root/cpasswd"
 cephalixpw=""
-registerpw=$( grep de.cranix.dao.User.Register.Password= /opt/cranix-java/conf/cranix-api.properties | sed 's/de.cranix.dao.User.Register.Password=//' )
-# New installation or called in an installed system
-if [ "${registerpw}" = "REGISTERPW" ]; then
-    registerpw=`mktemp XXXXXXXXXX`
-    sed -i s/REGISTERPW/$registerpw/ /opt/cranix-java/conf/cranix-api.properties
+if [ -e $passwdf ]; then
+	export passwd=$( cat $passwdf )
+fi
+if [ -e $cephalixpwf ]; then
+	export cephalixpw=$( cat $cephalixpwf )
+fi
+if [ -e /root/registerpw ]; then
+	export registerpw=$( cat /root/registerpw )
+else
+	export registerpw=$( mktemp XXXXXXXXXX )
+	echo -n "$registerpw" > /root/registerpw
 fi
 ########################################################################
 # Fixed gids
@@ -50,7 +57,6 @@ function usage (){
 	echo "          -h,   --help              Display the help."
 	echo "                --all               Setup all services and create the initial groups and user accounts."
 	echo "                --samba             Setup the AD-DC samba server."
-	echo "                --printserver       Setup the printserver."
 	echo "                --fileserver        Setup the fileserver."
 	echo "                --dhcp              Setup the DHCP server"
 	echo "                --mail              Setup the mail server"
@@ -73,18 +79,20 @@ function log() {
     fi
 }
 
-function InitGlobalVariable (){
+function PreSetup (){
 
     ########################################################################
-    # Avoid running migration scripts:
     mkdir -p /var/adm/cranix/
-    touch /var/adm/cranix/migrated-to-cranix
+
+    log "Register the Server"
+    /usr/share/cranix/tools/register.sh
 
     log "Start InitGlobalVariable"
 
     ########################################################################
     log " - Read sysconfig file"
     . $sysconfig
+    . /etc/os-release
 
     log "   passwd = $passwd"
 
@@ -102,27 +110,39 @@ function InitGlobalVariable (){
     sed -i s/^CRANIX_DOMAIN=.*/CRANIX_DOMAIN=\"$CRANIX_DOMAIN\"/ $sysconfig
     REALM=${CRANIX_DOMAIN^^}
 
-    log "End InitGlobalVariable"
+    echo "Setup internal network"
+    if [ ${CRANIX_SERVER} != ${CRANIX_NET_GATEWAY} ]; then
+	    INTERNAL_GATEWAY="ipv4.gateway ${CRANIX_NET_GATEWAY}"
+    fi
+    nmcli connection add type ethernet con-name "cranix-intern" ifname ${CRANIX_INTERNAL_DEVICE} ipv4.method manual \
+	    ipv4.addresses ${CRANIX_SERVER}/${CRANIX_NETMASK},${CRANIX_FILESERVER}/${CRANIX_NETMASK},${CRANIX_PRINTSERVER}/${CRANIX_NETMASK},${CRANIX_MAILSERVER}/${CRANIX_NETMASK},${CRANIX_PROXY}/${CRANIX_NETMASK} \
+	    ${INTERNAL_GATEWAY} ipv4.dns "127.0.0.1,8.8.8.8,8.8.4.4"
+    nmcli connection up "cranix-intern"
+
+    echo "Setup external network"
+    if [ "${CRANIX_SERVER_EXT_DEVICE}" ]; then
+	    if [ ${CRANIX_SERVER_EXT_IP} == "auto" ]; then
+    		nmcli connection add type ethernet con-name "cranix-external" ifname ${CRANIX_SERVER_EXT_DEVICE} ipv4.method auto
+		nmcli connection modify "cranix-external" ipv4.ignore-auto-dns yes
+	    else
+    		nmcli connection add type ethernet con-name "cranix-external" ifname ${CRANIX_SERVER_EXT_DEVICE} ipv4.method manual \
+			ipv4.addresses ${CRANIX_SERVER_EXT_IP}/${CRANIX_SERVER_EXT_NETMASK} ipv4.gateway ${CRANIX_SERVER_EXT_GW}
+	    fi
+    fi
+    nmcli connection up "cranix-extern"
+    nmcli general hostname admin.${CRANIX_DOMAIN}
+
+    ln -fs /usr/etc/services /etc/services
+    log "End PreSetup"
 }
 
 function SetupSamba (){
     log "Start SetupSamba"
 
     ########################################################################
-    log " - Disable AppArmor on smbd, nmbd, winbindd if exists"
-    if [ -f "/etc/apparmor.d/usr.sbin.smbd" ] && [ -f "/etc/apparmor.d/usr.sbin.nmbd" ] && [ -f "/etc/apparmor.d/usr.sbin.winbindd" ]; then
-	log " - Disable AppArmor on smbd, nmbd, winbindd"
-	mv /etc/apparmor.d/usr.sbin.smbd     /etc/apparmor.d/disable/
-	mv /etc/apparmor.d/usr.sbin.nmbd     /etc/apparmor.d/disable/
-	mv /etc/apparmor.d/usr.sbin.winbindd /etc/apparmor.d/disable/
-	/usr/bin/systemctl restart apparmor.service
-    fi
-
-    ########################################################################
     log " - Clean up befor samba config"
     mkdir -p /etc/samba-backup-$logdate
     mv /etc/krb5.conf /etc/krb5.conf.$logdate
-    cp -r /etc/samba/ /etc/samba-backup-$logdate
     rm -r /etc/samba/*
 
     ########################################################################
@@ -309,33 +329,10 @@ function SetupFileserver () {
     log "End Setup Fileserver"
 }
 
-function SetupDHCP (){
-    log "Start SetupDHCP"
-    sed    "s/#CRANIX_SERVER#/${CRANIX_SERVER}/g"                   /usr/share/cranix/setup/templates/dhcpd.conf.ini > /usr/share/cranix/templates/dhcpd.conf
-    sed -i "s/#CRANIX_DOMAIN#/${CRANIX_DOMAIN}/g"                   /usr/share/cranix/templates/dhcpd.conf
-    sed -i "s/#CRANIX_ANON_DHCP_RANGE#/${CRANIX_ANON_DHCP_RANGE}/g" /usr/share/cranix/templates/dhcpd.conf
-    sed -i "s/#CRANIX_NETWORK#/${CRANIX_NETWORK}/g"                 /usr/share/cranix/templates/dhcpd.conf
-    sed -i "s/#CRANIX_NETMASK#/${CRANIX_NETMASK_STRING}/g"          /usr/share/cranix/templates/dhcpd.conf
-    cp /usr/share/cranix/templates/dhcpd.conf /etc/dhcpd.conf
-    if [ $CRANIX_USE_DHCP = "yes" ]; then
-        . /etc/sysconfig/dhcpd
-        if [ -z "$DHCPD_INTERFACE" ]; then
-            sed -i 's/^DHCPD_INTERFACE=.*/DHCPD_INTERFACE="ANY"/'   /etc/sysconfig/dhcpd
-        fi
-        /usr/bin/systemctl enable dhcpd
-        /usr/bin/systemctl start  dhcpd
-    fi
-    log "End SetupDHCP"
-}
-
-function SetupMail (){
-    log "Start SetupMail"
-    log "End SetupMail"
-}
-
 function SetupInternetFilter (){
     if [ ${CRANIX_INTERNET_FILTER} = "proxy" ]; then
         log "Start SetupProxy"
+	zypper -n install cranix-proxy
         sed "s/#DOMAIN#/${CRANIX_DOMAIN}/g" /srv/www/admin/proxy.pac.in > /srv/www/admin/proxy.pac
         ln  /srv/www/admin/proxy.pac /srv/www/admin/wpad.dat
         cp /etc/squid/squid.conf.in      /etc/squid/squid.conf
@@ -344,9 +341,7 @@ function SetupInternetFilter (){
         log "End SetupProxy"
     else
 	log "Start SetupUnbound"
-	if [ ! -e /usr/share/cranix/tools/unbound/setup.sh ]; then
-		zypper -n install cranix-unbound
-	fi
+	zypper -n install cranix-unbound
 	/usr/share/cranix/tools/unbound/setup.sh
 	log "End SetupUnbound"
     fi
@@ -465,6 +460,18 @@ function SetupInitialAccounts (){
 
 function SetupApi (){
     log "Start SetupApi"
+    log "Install the right Api package"
+    if [ ${CRANIX_TYPE,,} == "cephalix" ]; then
+	    zypper -n install cephalix-java cephalix-base
+	    JAVA_LIB="/opt/cranix-java/lib/cranix-${VERSION_ID}.jar"
+	    JAVA_APPLICATION="de.cranix.api.CephalixxApplication"
+    else
+	    zypper -n install cranix-java
+	    JAVA_LIB="/opt/cranix-java/lib/cranix-${VERSION_ID}.jar"
+	    JAVA_APPLICATION="de.cranix.api.CranixApplication"
+    fi
+    sed -i s/REGISTERPW/$registerpw/ /opt/cranix-java/conf/cranix-api.properties
+
 
     ########################################################################
     log "Setup ssh key"
@@ -473,29 +480,17 @@ function SetupApi (){
     /usr/bin/ssh-keygen -t rsa -N '' -f .ssh/id_rsa
     cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
     /bin/chmod 600 /root/.ssh/authorized_keys
-    echo 'stricthostkeychecking no' > /root/.ssh/config
-    echo '# Copyright (c) Peter Varkoly <peter@varkoly.de> Nürnberg, Germany.  All rights reserved.
-. /etc/os-release
-FQH=`hostname -f`
-PS1="$FQH:\w # "
-_bred="$(path tput bold 2> /dev/null; path tput setaf 1 2> /dev/null)"
-_sgr0="$(path tput sgr0 2> /dev/null)"
-PS1="${PRETTY_NAME} \[$_bred\]$PS1\[$_sgr0\]"
-unset _bred _sgr0
-' > /root/.profile
-
     ########################################################################
-    log "Start and setup mysql"
-    cp /etc/my.cnf.in /etc/my.cnf
-    /usr/bin/systemctl start  mysql
-    /usr/bin/systemctl enable mysql
+    log "Start and setup mariadb"
+    /usr/bin/systemctl start  mariadb
+    /usr/bin/systemctl enable mariadb
     ########################################################################
-    log "Make mysql secure"
+    log "Make mariadb secure"
     cd /root
     password=`mktemp XXXXXXXXXX`
-    echo "CREATE DATABASE CRX" | mysql
-    echo "grant all on CRX.* to 'cranix'@'localhost'  identified by '$password'" | mysql
-    mysqladmin -u root password $password
+    echo "CREATE DATABASE CRX" | mariadb
+    echo "GRANT ALL ON CRX.* TO 'cranix'@'localhost'  IDENTIFIED BY '$password'" | mariadb
+    mariadb-admin -u root password $password
 echo "[client]
 host=localhost
 user=root
@@ -504,20 +499,13 @@ chmod 600 /root/.my.cnf
 
     sed -i s/MYSQLPWD/$password/ /opt/cranix-java/conf/cranix-api.properties
     sed -i s/CRANIX_NETBIOSNAME/${CRANIX_NETBIOSNAME}/ /opt/cranix-java/conf/cranix-api.properties
-    /usr/bin/systemctl restart  mysql
+    /usr/bin/systemctl restart  mariadb
     sleep 5
+    java -Dfile.encoding=UTF-8 -Duser.country=US -Duser.language=en -Duser.variant -cp ${JAVA_LIB} ${JAVA_APPLICATION} setupDB
     SERVER_NETWORK=$( echo $CRANIX_SERVER_NET | gawk -F '/' '{ print $1 }' )
     SERVER_NETMASK=$( echo $CRANIX_SERVER_NET | gawk -F '/' '{ print $2 }' )
     ANON_NETWORK=$( echo $CRANIX_ANON_DHCP_NET | gawk -F '/' '{ print $1 }' )
     ANON_NETMASK=$( echo $CRANIX_ANON_DHCP_NET | gawk -F '/' '{ print $2 }' )
-    if [ "$CRANIX_TYPE" = "cephalix"  ]; then
-        /usr/bin/systemctl stop cephalix-api
-	sleep 5
-    else
-        /usr/bin/systemctl stop cranix-api
-	sleep 5
-    fi
-    mysql < /opt/cranix-java/data/crx-objects.sql
     for i in /opt/cranix-java/data/*-inserts.sql
     do
 	sed -i "s/#SERVER_NETWORK#/${SERVER_NETWORK}/g"		$i
@@ -534,18 +522,18 @@ chmod 600 /root/.my.cnf
 	sed -i "s/#CRANIX_NETWORK#/${CRANIX_NETWORK}/g"		$i
 	sed -i "s/#CRANIX_NETMASK#/${CRANIX_NETMASK}/g"		$i
     done
-    case $CRANIX_TYPE in
+    case ${CRANIX_TYPE,,} in
         cephalix)
-            mysql -f CRX < /opt/cranix-java/data/school-inserts.sql
-            mysql -f CRX < /opt/cranix-java/data/cephalix-inserts.sql
+            mariadb -f CRX < /opt/cranix-java/data/school-inserts.sql
+            mariadb -f CRX < /opt/cranix-java/data/cephalix-inserts.sql
             /usr/bin/systemctl start cephalix-api
 	;;
         business)
-            mysql -f CRX < /opt/cranix-java/data/business-inserts.sql
+            mariadb -f CRX < /opt/cranix-java/data/business-inserts.sql
             /usr/bin/systemctl start cranix-api
 	;;
 	*)
-            mysql -f CRX < /opt/cranix-java/data/school-inserts.sql
+            mariadb -f CRX < /opt/cranix-java/data/school-inserts.sql
             /usr/bin/systemctl start cranix-api
     esac
     sleep 3
@@ -560,6 +548,18 @@ chmod 600 /root/.my.cnf
     fi
     /usr/share/cranix/tools/wait-for-api.sh
     /opt/cranix-java/data/updates/022-add-subjects.sh
+}
+
+function SetupDHCP (){
+    log "Start SetupDHCP"
+    zypper -n install kea kea-hooks
+    /usr/share/cranix/setup/scripts/setup-kea.py
+    log "End SetupDHCP"
+}
+
+function SetupMail (){
+    log "Start SetupMail"
+    log "End SetupMail"
 }
 
 function PostSetup (){
@@ -607,8 +607,13 @@ function PostSetup (){
 
     ########################################################################
     log "Setup Cups"
+    cp /etc/cups/cupsd.conf /etc/cups/cupsd.conf.orig
     cp /etc/cups/cupsd.conf.in /etc/cups/cupsd.conf
     /usr/share/cranix/tools/sync-cups-to-samba.py
+
+    ########################################################################
+    log "Install some additional packages"
+    zypper -n install cranix-web cranix-clone
 
     ########################################################################
     log "Prepare roots desktop"
@@ -619,10 +624,23 @@ function PostSetup (){
     ########################################################################
     log "Enable some important services"
     /usr/lib/systemd-presets-branding/branding-preset-states save
+    NAME="CRANIX"
     if [ "$CRANIX_TYPE" = "cephalix"  ]; then
         /usr/bin/systemctl enable  cephalix-api
         /usr/bin/systemctl disable cranix-api
+	NAME="CEPHALIX"
     fi
+    echo 'stricthostkeychecking no' > /root/.ssh/config
+    echo '# Copyright (c) Peter Varkoly <peter@varkoly.de> Nürnberg, Germany.  All rights reserved.
+. /etc/os-release
+FQH=`hostname -f`
+PS1="$FQH:\w # "
+_bred="$(path tput bold 2> /dev/null; path tput setaf 1 2> /dev/null)"
+_sgr0="$(path tput sgr0 2> /dev/null)"
+PS1="${NAME} ${VERSION} \[$_bred\]$PS1\[$_sgr0\]"
+unset _bred _sgr0
+' > /root/.profile
+
 
     ########################################################################
     log "Generate password file templates"
@@ -644,6 +662,9 @@ function PostSetup (){
     ########################################################################
     log "Timeserver setup"
     /usr/share/cranix/setup/scripts/setup-chrony.sh
+
+    rm -f /root/Desktop/CRANIX-Setup.desktop
+
     log "End PostSetup"
 }
 
@@ -725,7 +746,7 @@ while [ "$1" != "" ]; do
     shift
 done
 
-InitGlobalVariable
+PreSetup
 if [ "$all" = "yes" ] || [ "$samba" = "yes" ]; then
     SetupSamba
 fi
@@ -738,9 +759,6 @@ fi
 if [ "$all" = "yes" ] || [ "$samba" = "yes" ] || [ "$fileserver" = "yes" ]; then
     SetupFileserver
 fi
-if [ "$all" = "yes" ] || [ "$dhcp" = "yes" ]; then
-    SetupDHCP
-fi
 if [ "$all" = "yes" ] || [ "$mail" = "yes" ]; then
     SetupMail
 fi
@@ -749,6 +767,9 @@ if [ "$all" = "yes" ] || [ "$api" = "yes" ]; then
 fi
 if [ "$all" = "yes" ] || [ "$filter" = "yes" ]; then
     SetupInternetFilter
+fi
+if [ "$all" = "yes" ] || [ "$dhcp" = "yes" ]; then
+    SetupDHCP
 fi
 if [ "$all" = "yes" ] || [ "$postsetup" = "yes" ]; then
     PostSetup

@@ -3,33 +3,14 @@
 # Copyright (C) Peter Varkoly <pvarkoly@cephalix.eu> Nuremberg, Germany.  All rights reserved.
 #
 
-from xhtml2pdf import pisa             # import python module
-import sys
 import csv
 import os
-try:
-    from html import escape  # python 3.x
-except ImportError:
-    from cgi import escape
-
-def convertHtmlToPdf(sourceHtml, outputFilename):
-    # open output file for writing (truncated binary)
-    resultFile = open(outputFilename, "w+b")
-
-    # convert HTML to PDF
-    pisaStatus = pisa.CreatePDF(
-            sourceHtml,                # the HTML to convert
-            dest=resultFile)           # file handle to recieve result
-
-    # close output file
-    resultFile.close()                 # close output file
-
-    # return True on success and False on errors
-    return pisaStatus.err
+import sys
+from html import escape
 
 import_dir= sys.argv[1] + "/"
 role      = sys.argv[2]
-user_list = '{0}/all-{1}.txt'.format(import_dir,role)
+user_list = '{0}/all-{1}.txt'.format(import_dir, role)
 if not os.path.exists( import_dir + "/passwordfiles" ):
   os.mkdir( import_dir + "passwordfiles", 0o770 );
 
@@ -39,27 +20,29 @@ with open(user_list) as csvfile:
     dialect = csv.Sniffer().sniff(csvfile.readline())
     csvfile.seek(0)
     #Create an array of dicts from it
-    csv.register_dialect('oss',dialect)
-    reader = csv.DictReader(csvfile,dialect='oss')
+    csv.register_dialect('oss', dialect)
+    reader = csv.DictReader(csvfile, dialect='oss')
     for row in reader:
-        fobj = open("/usr/share/cranix/templates/password.html","r")
+        fobj = open("/usr/share/cranix/templates/password.html", "r")
         template = fobj.read()
         fobj.close()
         uid=""
         group=""
         for field in reader.fieldnames:
             to_replace = '#'+field+'#'
-            template = template.replace(to_replace,escape(row[field]))
+            template = template.replace(to_replace, escape(row[field]))
             if field == "uid":
                 uid=row[field]
             if  ( role == 'students' ) and ( field == "classes" ):
                 group=row[field].split(' ')[0]
                 if group not in all_classes:
                     all_classes.append(group)
+        fileName = f"{import_dir}/passwordfiles/{uid}"
         if role == 'students':
-           convertHtmlToPdf(template, import_dir + "/passwordfiles/" + group + "-" + uid + '.pdf')
-        else:
-           convertHtmlToPdf(template, import_dir + "/passwordfiles/" + uid + '.pdf')
+            fileName = f"{import_dir}/passwordfiles/{group}-{uid}"
+        with open(f"{fileName}.html", "w") as f:
+            f.write(template)
+        os.system(f"/usr/bin/htmldoc --no-title --no-toc --charset utf-8 -f {fileName}.pdf {fileName}.html")
 
 if role == 'students':
   for group in all_classes:

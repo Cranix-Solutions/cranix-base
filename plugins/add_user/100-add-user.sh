@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2018 Peter Varkoly Nürnberg, Germany.  All rights reserved.
+# Copyright (c) 2025 Peter Varkoly Nürnberg, Germany.  All rights reserved.
 #
 
 if [ ! -e /etc/sysconfig/cranix ]; then
@@ -82,6 +82,14 @@ do
   esac
 done
 
+variable="Das ist eine Berufsschule in Nürnberg"
+suchbegriff="Berufsschule"
+
+# [[:<:]] und [[:>:]] sind die sichersten Wortgrenzen-Marker in der Bash-Regex
+if [[ "${CRANIX_DB_ONLY_ROLES,,}" =~ [[:<:]]${role,,}[[:>:]] ]]; then
+	#This user must not be created in system
+	exit 0
+fi
 skel="/etc/skel"
 
 if [ -z "${CRANIX_FILESERVER_NETBIOSNAME}" ]; then
@@ -181,9 +189,4 @@ if [ -z "$fsquota" ]; then
 fi
 
 /usr/sbin/crx_set_quota.sh $uid $fsquota
-
-# Set mailsystem quota
-if [ "$role" != "workstations" -a "$role" != "guests" ]; then
-	/usr/sbin/crx_set_mquota.pl $uid $msquota
-fi
 

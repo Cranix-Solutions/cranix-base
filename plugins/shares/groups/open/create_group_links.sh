@@ -14,7 +14,7 @@ cd "$CRANIX_HOME_BASE/groups/LINKED/$user/"
 IFS=$'\n'
 for GROUP in  $( /usr/sbin/crx_api_text.sh GET users/byUid/$user/groups )
 do
-    g=$( echo $GROUP|tr '[:lower:]' '[:upper:]' )
+    g=${GROUP^^}
     if [ -d "$CRANIX_HOME_BASE/groups/$g" ]
     then
         ln -s "$CRANIX_HOME_BASE/groups/$g"
@@ -32,4 +32,12 @@ fi
 if [ ! -e $userHome/ALL -a -d $CRANIX_HOME_BASE/all ]; then
         ln -s $CRANIX_HOME_BASE/all $userHome/ALL
 fi
-
+if [ "${CRANIX_LINK_SOFTWARE,,}" = "yes" ]; then
+	if [ ! -e $userHome/SOFTWARE -a -d $CRANIX_HOME_BASE/software ]; then
+		ln -s $CRANIX_HOME_BASE/software $userHome/SOFTWARE
+	fi
+fi
+role=$( /usr/sbin/crx_api_text.sh GET users/byUid/${user}/role )
+if [ ! -e "${userHome}/ALL${role^^}" -a -d "$CRANIX_HOME_BASE/groups/${role^^}" ]; then
+	ln -s "$CRANIX_HOME_BASE/groups/${role^^}" "${userHome}/ALL${role^^}"
+fi
