@@ -24,6 +24,7 @@ accounts="no"
 verbose="yes"
 cephalixpwf="/root/cpasswd"
 cephalixpw=""
+all="yes"
 if [ -e $passwdf ]; then
 	export passwd=$( cat $passwdf )
 fi
@@ -114,18 +115,26 @@ function PreSetup (){
     if [ ${CRANIX_SERVER} != ${CRANIX_NET_GATEWAY} ]; then
 	    INTERNAL_GATEWAY="ipv4.gateway ${CRANIX_NET_GATEWAY}"
     fi
-    nmcli connection add type ethernet con-name "cranix-intern" ifname ${CRANIX_INTERNAL_DEVICE} ipv4.method manual \
+    LINKTYPE="ethernet"
+    if [ ${CRANIX_INTERNAL_DEVICE/dummy/} != ${CRANIX_INTERNAL_DEVICE} ]; then
+	    LINKTYPE="dummy"
+    fi
+    nmcli connection add type $LINKTYPE con-name "cranix-intern" ifname ${CRANIX_INTERNAL_DEVICE} ipv4.method manual \
 	    ipv4.addresses ${CRANIX_SERVER}/${CRANIX_NETMASK},${CRANIX_FILESERVER}/${CRANIX_NETMASK},${CRANIX_PRINTSERVER}/${CRANIX_NETMASK},${CRANIX_MAILSERVER}/${CRANIX_NETMASK},${CRANIX_PROXY}/${CRANIX_NETMASK} \
 	    ${INTERNAL_GATEWAY} ipv4.dns "127.0.0.1,8.8.8.8,8.8.4.4"
     nmcli connection up "cranix-intern"
 
     echo "Setup external network"
+    LINKTYPE="ethernet"
+    if [ ${CRANIX_SERVER_EXT_DEVICE/dummy/} != ${CRANIX_SERVER_EXT_DEVICE} ]; then
+	    LINKTYPE="dummy"
+    fi
     if [ "${CRANIX_SERVER_EXT_DEVICE}" ]; then
 	    if [ ${CRANIX_SERVER_EXT_IP} == "auto" ]; then
-    		nmcli connection add type ethernet con-name "cranix-external" ifname ${CRANIX_SERVER_EXT_DEVICE} ipv4.method auto
+		nmcli connection add type $LINKTYPE con-name "cranix-external" ifname ${CRANIX_SERVER_EXT_DEVICE} ipv4.method auto
 		nmcli connection modify "cranix-external" ipv4.ignore-auto-dns yes
 	    else
-    		nmcli connection add type ethernet con-name "cranix-external" ifname ${CRANIX_SERVER_EXT_DEVICE} ipv4.method manual \
+		nmcli connection add type $LINKTYPE con-name "cranix-external" ifname ${CRANIX_SERVER_EXT_DEVICE} ipv4.method manual \
 			ipv4.addresses ${CRANIX_SERVER_EXT_IP}/${CRANIX_SERVER_EXT_NETMASK} ipv4.gateway ${CRANIX_SERVER_EXT_GW}
 	    fi
     fi
@@ -133,6 +142,15 @@ function PreSetup (){
     nmcli general hostname admin.${CRANIX_DOMAIN}
 
     ln -fs /usr/etc/services /etc/services
+    echo "# CRANIX SPECIFIC ENTRIES
+${CRANIX_SERVER} admin.${CRANIX_DOMAIN} admin
+${CRANIX_FILESERVER} fileserver.${CRANIX_DOMAIN} fileserver
+${CRANIX_PRINTSERVER} printserver.${CRANIX_DOMAIN} printserver
+${CRANIX_MAILSERVER} mailserver.${CRANIX_DOMAIN} mailserver
+${CRANIX_PROXY} proxy.${CRANIX_DOMAIN} proxy
+
+${CRANIX_SERVER_EXT_IP} extip
+    " >> /etc/hosts
     log "End PreSetup"
 }
 
@@ -171,7 +189,7 @@ function SetupSamba (){
 
     ########################################################################
     log " - Tell nsswitch to use winbind."
-    cp /usr/share/cranix/setup/templates/nsswitch.conf /etc/nsswitch.conf
+    cp /usr/share/cranix/setup/templates/nsswitch.conf /usr/etc/nsswitch.conf
 
     ########################################################################
     log " - Create linked groups directory "
@@ -577,6 +595,7 @@ function PostSetup (){
     ########################################################################
     log "Setup sssd configuration"
     LDAPBASE=$( crx_get_dn.sh ossreader | sed 's/dn: CN=ossreader,CN=Users,//' )
+    mkdir -p /etc/sssd/
     sed "s/###LDAPBASE###/$LDAPBASE/" /usr/share/cranix/setup/templates/sssd.conf > /etc/sssd/sssd.conf
     sed -i "s/###WORKGROUP###/${CRANIX_WORKGROUP}/" /etc/sssd/sssd.conf
     chmod 600 /etc/sssd/sssd.conf
@@ -597,6 +616,10 @@ function PostSetup (){
     /usr/bin/systemctl start  apache2
 
     ########################################################################
+    log "Install some additional packages"
+    zypper -n install cranix-web cranix-clone cranix-firewall
+
+    ########################################################################
     log "Setup firewall"
     /usr/bin/systemctl enable cranix-firewall
     if [ $CRANIX_ISGATE = "yes" ]; then
@@ -612,14 +635,15 @@ function PostSetup (){
     /usr/share/cranix/tools/sync-cups-to-samba.py
 
     ########################################################################
-    log "Install some additional packages"
-    zypper -n install cranix-web cranix-clone
-
-    ########################################################################
     log "Prepare roots desktop"
     mkdir -p /root/Desktop/
+    echo "[Desktop Entry]
+Icon=/srv/www/admin/assets/images/logo/cranix_school.svg
+Name=CRANIX-Admin
+Type=Link
+URL=https://admin.$CRANIX_DOMAIN
+" > /etc/skel/Desktop/CRANIX-Admin.desktop
     cp /etc/skel/Desktop/* /root/Desktop/
-    tar xf /usr/share/cranix/setup/templates/needed-files-for-root.tar -C /root/
 
     ########################################################################
     log "Enable some important services"
