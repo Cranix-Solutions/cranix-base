@@ -10,7 +10,7 @@ import cranixconfig
 from configobj import ConfigObj
 from bashconfigparser import BashConfigParser
 
-config = BashConfigParser("/opt/cranix-java/conf/cranix-api.properties")
+config = BashConfigParser(config_file="/opt/cranix-java/conf/cranix-api.properties")
 passwd = config['de.cranix.dao.User.Register.Password']
 name=""
 ip=[]

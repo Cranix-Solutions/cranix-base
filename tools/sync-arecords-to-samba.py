@@ -7,7 +7,7 @@ from bashconfigparser import BashConfigParser
 
 devices=json.load(os.popen('crx_api.sh GET devices/all'))
 domain=os.popen('crx_api_text.sh GET system/configuration/DOMAIN').read()
-config = BashConfigParser("/opt/cranix-java/conf/cranix-api.properties")
+config = BashConfigParser(config_file="/opt/cranix-java/conf/cranix-api.properties")
 passwd = config.get('de.cranix.dao.User.Register.Password')
 for device in devices:
   ip   = device["ip"]

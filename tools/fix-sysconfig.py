@@ -30,8 +30,8 @@ os.system('cp {0} {1}'.format('/etc/sysconfig/cranix',backup_dir))
 if os.path.exists("/usr/share/cranix/templates/radius/RADIUS-SETTINGS"):
     os.system('/usr/bin/fillup /usr/share/fillup-templates/sysconfig.cranix /usr/share/cranix/templates/radius/RADIUS-SETTINGS /usr/share/fillup-templates/sysconfig.cranix')
 
-fillup_template = BashConfigParser('/usr/share/fillup-templates/sysconfig.cranix')
-cranix_conf = BashConfigParser('/etc/sysconfig/cranix')
+fillup_template = BashConfigParser(config_file='/usr/share/fillup-templates/sysconfig.cranix')
+cranix_conf = BashConfigParser(config_file='/etc/sysconfig/cranix')
 
 for key in fillup_template:
     if key in cranix_conf:

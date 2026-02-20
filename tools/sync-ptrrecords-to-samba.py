@@ -19,7 +19,7 @@ elif netmask > 15 and netmask < 24:
 elif netmask > 7 and netmask < 16:
   revdomain = network[0]+'.IN-ADDR.ARPA'
 
-config = BashConfigParser("/opt/cranix-java/conf/cranix-api.properties")
+config = BashConfigParser(config_file="/opt/cranix-java/conf/cranix-api.properties")
 passwd = config.get('de.cranix.dao.User.Register.Password')
 res = os.system("samba-tool dns zoneinfo localhost " + revdomain + " -U register%" + passwd + " &>/dev/null")
 if res != 0:

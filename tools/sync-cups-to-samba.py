@@ -17,7 +17,7 @@ except AttributeError:
     print_config_file = "/etc/samba/smb-printserver.conf"
 
 server_net = cranixconfig.CRANIX_SERVER_NET
-config = BashConfigParser("/opt/cranix-java/conf/cranix-api.properties")
+config = BashConfigParser(config_file="/opt/cranix-java/conf/cranix-api.properties")
 passwd = config.get('de.cranix.dao.User.Register.Password')
 
 os.system('chgrp -R "SYSADMINS" /var/lib/printserver/drivers')
