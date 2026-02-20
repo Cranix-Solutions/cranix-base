@@ -8,8 +8,10 @@ import os
 import sys
 import socket
 from configobj import ConfigObj
-config = ConfigObj("/opt/cranix-java/conf/cranix-api.properties")
-passwd = config['de.cranix.dao.User.Register.Password']
+from bashconfigparser import BashConfigParser
+
+config = BashConfigParser("/opt/cranix-java/conf/cranix-api.properties")
+passwd = config.get('de.cranix.dao.User.Register.Password')
 domain = os.popen('crx_api_text.sh GET system/configuration/DOMAIN').read()
 
 devices=json.load(os.popen('/usr/sbin/crx_api.sh GET devices/all'))

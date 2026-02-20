@@ -1,8 +1,10 @@
 #!/usr/bin/python3
 
 from configobj import ConfigObj
-config = ConfigObj("/opt/cranix-java/conf/cranix-api.properties")
-passwd = config['de.cranix.dao.User.Register.Password']
+from bashconfigparser import BashConfigParser
+
+config = BashConfigParser("/opt/cranix-java/conf/cranix-api.properties")
+passwd = config.get('de.cranix.dao.User.Register.Password')
 
 import configparser
 import json
