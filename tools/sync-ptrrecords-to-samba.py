@@ -3,7 +3,6 @@ import json
 import os
 import os.path
 import socket
-from configobj import ConfigObj
 from bashconfigparser import BashConfigParser
 
 devices=json.load(os.popen('crx_api.sh GET devices/all'))

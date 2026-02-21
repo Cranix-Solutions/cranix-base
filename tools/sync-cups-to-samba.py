@@ -8,7 +8,6 @@ import sys
 import re
 import json
 import cranixconfig
-from configobj import ConfigObj
 from bashconfigparser import BashConfigParser
 
 try:

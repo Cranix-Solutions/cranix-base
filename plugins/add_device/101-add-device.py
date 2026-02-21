@@ -6,7 +6,6 @@ import json
 import os
 import sys
 import cranixconfig
-from configobj import ConfigObj
 from bashconfigparser import BashConfigParser
 
 

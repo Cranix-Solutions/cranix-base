@@ -8,7 +8,6 @@ import re
 import sys
 import cranixconfig
 import time
-from configobj import ConfigObj
 from bashconfigparser import BashConfigParser
 
 #Declare variables

@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-from configobj import ConfigObj
 from bashconfigparser import BashConfigParser
 
 config = BashConfigParser(config_file="/opt/cranix-java/conf/cranix-api.properties")

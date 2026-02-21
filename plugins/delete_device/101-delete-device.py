@@ -7,7 +7,6 @@ import json
 import os
 import sys
 import cranixconfig
-from configobj import ConfigObj
 from bashconfigparser import BashConfigParser
 
 config = BashConfigParser(config_file="/opt/cranix-java/conf/cranix-api.properties")

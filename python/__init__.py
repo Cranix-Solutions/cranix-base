@@ -13,7 +13,6 @@ import time
 import csv
 
 from typing import Set
-from configobj import ConfigObj
 from bashconfigparser import BashConfigParser
 
 from . import _vars

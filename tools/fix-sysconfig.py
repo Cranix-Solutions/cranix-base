@@ -2,7 +2,6 @@
 
 import os
 import os.path
-from configobj import ConfigObj
 from bashconfigparser import BashConfigParser
 
 # new services to add
