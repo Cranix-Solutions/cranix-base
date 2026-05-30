@@ -190,6 +190,7 @@ function SetupSamba (){
     ########################################################################
     log " - Tell nsswitch to use winbind."
     cp /usr/share/cranix/setup/templates/nsswitch.conf /usr/etc/nsswitch.conf
+    ln -sf /usr/etc/nsswitch.conf /etc/nsswitch.conf
 
     ########################################################################
     log " - Create linked groups directory "
@@ -292,23 +293,10 @@ function SetupPrintserver () {
     	samba-tool dns add localhost $CRANIX_DOMAIN printserver  A $CRANIX_PRINTSERVER   -U register%"$registerpw"
         echo -e "name: printserver\nip: $CRANIX_PRINTSERVER" | /usr/share/cranix/plugins/add_device/101-add-device.py
     fi
-    mkdir -p /var/lib/printserver/{drivers,lock,printing,private}
-    mkdir -p /var/lib/printserver/drivers/{IA64,W32ALPHA,W32MIPS,W32PPC,W32X86,WIN40,x64}
-    chgrp -R $sysadmins_gn /var/lib/printserver/drivers/
-    chmod -R 2775 /var/lib/printserver/drivers
-    mkdir -p /var/log/samba/printserver/
-    sed    "s/#REALM#/$REALM/g"                /usr/share/cranix/setup/templates/samba-printserver.conf.ini > /etc/samba/smb-printserver.conf
-    sed -i "s/#WORKGROUP#/$CRANIX_WORKGROUP/g" /etc/samba/smb-printserver.conf
-    sed -i "s/#IPADDR#/$CRANIX_PRINTSERVER/g"  /etc/samba/smb-printserver.conf
-    if [ "$passwd" ]; then
-        net ADS JOIN -s /etc/samba/smb-printserver.conf -U Administrator%"$passwd"
-    else
-        net ADS JOIN -s /etc/samba/smb-printserver.conf -U register%"$registerpw"
-    fi
-    systemctl enable samba-printserver
-    systemctl start  samba-printserver
-    chgrp -R $sysadmins_gn /var/lib/printserver/drivers
-    setfacl -Rdm g:$sysadmins_gn:rwx /var/lib/printserver/drivers
+    sed s/CRANIX_PRINTSERVER/$CRANIX_PRINTSERVER/ /usr/share/cranix/setup/templates/cupsd.conf > /usr/share/cranix/templates/cupsd.conf
+    sed -i s/CRANIX_DOMAIN/$CRANIX_DOMAIN/ /usr/share/cranix/templates/cupsd.conf
+    cp /etc/cups/cupsd.conf /etc/cups/cupsd.conf.orig
+    cp /usr/share/cranix/templates/cupsd.conf /etc/cups/cupsd.conf
     ########################################################################
     log "End Setup Printserver"
 }
@@ -627,12 +615,6 @@ function PostSetup (){
 	echo "net.ipv4.ip_forward = 1 "              >>  /etc/sysctl.d/cranix.conf
 	echo "net.ipv6.conf.all.forwarding = 1 "     >>  /etc/sysctl.d/cranix.conf
     fi
-
-    ########################################################################
-    log "Setup Cups"
-    cp /etc/cups/cupsd.conf /etc/cups/cupsd.conf.orig
-    cp /etc/cups/cupsd.conf.in /etc/cups/cupsd.conf
-    /usr/share/cranix/tools/sync-cups-to-samba.py
 
     ########################################################################
     log "Prepare roots desktop"
