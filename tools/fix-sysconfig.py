@@ -32,10 +32,10 @@ if os.path.exists("/usr/share/cranix/templates/radius/RADIUS-SETTINGS"):
 fillup_template = BashConfigParser(config_file='/usr/share/fillup-templates/sysconfig.cranix')
 cranix_conf = BashConfigParser(config_file='/etc/sysconfig/cranix')
 
-for key in fillup_template:
-    if key in cranix_conf:
+for key in fillup_template.variables:
+    if key in cranix_conf.variables:
         fillup_template.set(key, fillup_template.get(key))
-services=cranix_conf.get('CRANIX_MONITOR_SERVICES')
+services=cranix_conf.get('CRANIX_MONITOR_SERVICES').split()
 for i in old_services:
     if i in services:
         services.remove(i)
@@ -48,6 +48,5 @@ fillup_template.set('CRANIX_MONITOR_SERVICES', "'" + ' '.join(services) + "'")
 if 'CRANIX_FILESERVER_NETBIOSNAME' in cranix_conf.get_all_variables() and ( cranix_conf.get('CRANIX_FILESERVER_NETBIOSNAME') == '' or  cranix_conf.get('CRANIX_FILESERVER_NETBIOSNAME') == '""' ):
     fillup_template.set('CRANIX_FILESERVER', "")
 
-fillup_template.filename = '/etc/sysconfig/cranix'
-fillup_template.write()
+fillup_template.save(file_path='/etc/sysconfig/cranix')
 
