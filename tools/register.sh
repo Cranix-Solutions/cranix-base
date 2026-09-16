@@ -24,8 +24,10 @@ rm /etc/zypp/repos.d/*
 echo "[${CRANIX_UPDATE_URL}/CRANIX/${VERSION_ID}]
 username = ${REPO_USER}
 password = ${REPO_PASSWORD}
-
 [${CRANIX_SALT_PKG_URL}]
+username = ${REPO_USER}
+password = ${REPO_PASSWORD}
+[http://repo.cephalix.eu]
 username = ${REPO_USER}
 password = ${REPO_PASSWORD}
 " > /etc/zypp/credentials.cat
