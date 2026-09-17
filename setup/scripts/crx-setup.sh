@@ -148,7 +148,6 @@ ${CRANIX_FILESERVER} fileserver.${CRANIX_DOMAIN} fileserver
 ${CRANIX_PRINTSERVER} printserver.${CRANIX_DOMAIN} printserver
 ${CRANIX_MAILSERVER} mailserver.${CRANIX_DOMAIN} mailserver
 ${CRANIX_PROXY} proxy.${CRANIX_DOMAIN} proxy
-
 ${CRANIX_SERVER_EXT_IP} extip
     " >> /etc/hosts
     log "End PreSetup"
@@ -469,11 +468,11 @@ function SetupApi (){
     log "Install the right Api package"
     if [ ${CRANIX_TYPE,,} == "cephalix" ]; then
 	    zypper -n install cephalix-java cephalix-base
-	    JAVA_LIB="/opt/cranix-java/lib/cranix-${VERSION_ID}.jar"
+	    JAVA_LIB="/opt/cranix-java/lib/cranix.jar"
 	    JAVA_APPLICATION="de.cranix.api.CephalixxApplication"
     else
 	    zypper -n install cranix-java
-	    JAVA_LIB="/opt/cranix-java/lib/cranix-${VERSION_ID}.jar"
+	    JAVA_LIB="/opt/cranix-java/lib/cranix.jar"
 	    JAVA_APPLICATION="de.cranix.api.CranixApplication"
     fi
     sed -i s/REGISTERPW/$registerpw/ /opt/cranix-java/conf/cranix-api.properties
@@ -604,10 +603,6 @@ function PostSetup (){
     /usr/bin/systemctl start  apache2
 
     ########################################################################
-    log "Install some additional packages"
-    zypper -n install cranix-web cranix-clone cranix-firewall
-
-    ########################################################################
     log "Setup firewall"
     /usr/bin/systemctl enable cranix-firewall
     if [ $CRANIX_ISGATE = "yes" ]; then
@@ -643,7 +638,7 @@ FQH=`hostname -f`
 PS1="$FQH:\w # "
 _bred="$(path tput bold 2> /dev/null; path tput setaf 1 2> /dev/null)"
 _sgr0="$(path tput sgr0 2> /dev/null)"
-PS1="${NAME} ${VERSION} \[$_bred\]$PS1\[$_sgr0\]"
+PS1="'${NAME}' \[$_bred\]$PS1\[$_sgr0\]"
 unset _bred _sgr0
 ' > /root/.profile
 
@@ -669,7 +664,14 @@ unset _bred _sgr0
     log "Timeserver setup"
     /usr/share/cranix/setup/scripts/setup-chrony.sh
 
-    rm -f /root/Desktop/CRANIX-Setup.desktop
+    ########################################################################
+    log "Create some important directories"
+    mkdir -p /var/adm/cranix/{backup,challenges,opentasks,running,screenShots}
+
+    ########################################################################
+    log "Install some additional packages"
+    zypper -n install cranix-web
+    zypper -n install cranix-clone
 
     log "End PostSetup"
 }
@@ -782,4 +784,7 @@ if [ "$all" = "yes" ] || [ "$postsetup" = "yes" ]; then
 fi
 
 chmod 600 $logfile
+rm -f /root/Desktop/CRANIX-Setup.desktop
+reboot
+
 exit 0

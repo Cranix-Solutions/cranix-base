@@ -3,8 +3,7 @@
 . /etc/sysconfig/cranix
 REPO_USER=${CRANIX_REG_CODE:0:9}
 REPO_PASSWORD=${CRANIX_REG_CODE:10:9}
-. /etc/os-release
-
+VERSION_ID="current"
 if [ -z "${REPO_USER}" -o -z "${REPO_PASSWORD}" ]; then
 	echo "Invalid regcode."
 	exit 1
@@ -25,8 +24,10 @@ rm /etc/zypp/repos.d/*
 echo "[${CRANIX_UPDATE_URL}/CRANIX/${VERSION_ID}]
 username = ${REPO_USER}
 password = ${REPO_PASSWORD}
-
 [${CRANIX_SALT_PKG_URL}]
+username = ${REPO_USER}
+password = ${REPO_PASSWORD}
+[http://repo.cephalix.eu]
 username = ${REPO_USER}
 password = ${REPO_PASSWORD}
 " > /etc/zypp/credentials.cat
