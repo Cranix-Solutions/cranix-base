@@ -4,6 +4,7 @@
 from random import *
 from subprocess import run, PIPE
 import datetime
+import random
 import re
 
 valid_uid = re.compile(r"^[a-zA-Z0-9]+[a-zA-Z0-9\.\-\_]*[a-zA-Z0-9]$")
@@ -39,25 +40,36 @@ def read_birthday(bd):
     return "{:4s}-{:0>2s}-{:0>2s}".format(y,m,d)
 
 def create_secure_pw(l):
-    lenght= l-2
-    pw    = ""
-    signs = ['#', '+', '$']
-    start = int(randint(2,lenght/2+2))
-    for i in range(0,start):
-        if( randint(0,1) == 1 ):
-            pw = pw + chr(randint(0,25)+97)
-        else:
-            pw = pw + chr(randint(0,25)+65)
-    pw = pw + signs[randint(0,2)]
-    pw = pw + signs[randint(0,2)]
-    for i in range(0,lenght-start):
-        if( randint(0,1) == 1 ):
-            pw = pw + chr(randint(0,25)+97)
-        else:
-            pw = pw + chr(randint(0,25)+65)
-    pw.replace('I','G')
-    pw.replace('l','g')
-    return pw
+    salt = [
+        "ABCDEFGHJKLMNOPQRSTUVWXYZ",
+        "1234567890",
+        "abcdefghijkmnopqrstuvwxyz"
+    ]
+
+    builder = []
+
+    # First lowercase letter
+    salt_index = 2
+    begin_index = random.randrange(len(salt[salt_index]))
+    builder.append(salt[salt_index][begin_index])
+
+    # Then a digit
+    salt_index = 1
+    begin_index = random.randrange(len(salt[salt_index]))
+    builder.append(salt[salt_index][begin_index])
+
+    # Then an uppercase letter
+    salt_index = 0
+    begin_index = random.randrange(len(salt[salt_index]))
+    builder.append(salt[salt_index][begin_index])
+
+    # Five additional random characters
+    for i in range(3, l):
+        salt_index = random.randrange(3)
+        begin_index = random.randrange(len(salt[salt_index]))
+        builder.append(salt[salt_index][begin_index])
+
+    return "".join(builder)
 
 def print_error(msg):
     return '<tr><td colspan="2"><font color="red">{0}</font></td></tr>\n'.format(msg)
