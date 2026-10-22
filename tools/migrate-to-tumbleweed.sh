@@ -31,9 +31,7 @@ rpm -e --nodeps $( rpm -qa 'ruby2*' )
 
 echo "======================================="
 echo "Switch to Network Manager"
-# NetworkManager-config-server is required as otherwise NM will immediately add connections for all interfaces, resulting in duplicates.
-# NetworkManager-config-server can be removed after the migration is done.
-zypper -n install wicked2nm NetworkManager NetworkManager-config-server || ( echo "==============Migration ERROR============="; echo "wicked2nm is not available. Migration is not possible."; exit 1 )
+zypper -n install wicked2nm NetworkManager || ( echo "==============Migration ERROR============="; echo "wicked2nm is not available. Migration is not possible."; exit 1 )
 
 # If NetworkManager-config-server is not available you can also manually add the drop-in configuration.
 echo -e "[main]\nno-auto-default=*" > /etc/NetworkManager/conf.d/10-server.conf
