@@ -338,6 +338,38 @@ CRANIX_MAIL_TEACHER_QUOTA="25"
 
 ## Type:        string
 ## Default:
+# The domain used to build the e-mail addresses (username@domain) for the webmailer.
+# If it is empty the value of CRANIX_DOMAIN will be used.
+CRANIX_MAIL_DOMAIN=""
+
+## Type:	integer
+## Default:	993
+# The port of the IMAP server used by the webmailer.
+CRANIX_IMAP_PORT="993"
+
+## Type:	string(ssl,starttls,none)
+## Default:	ssl
+# The security of the IMAP connection used by the webmailer.
+CRANIX_IMAP_SECURITY="ssl"
+
+## Type:	integer
+## Default:	465
+# The port of the SMTP server used by the webmailer.
+CRANIX_SMTP_PORT="465"
+
+## Type:	string(ssl,starttls,none)
+## Default:	ssl
+# The security of the SMTP connection used by the webmailer.
+CRANIX_SMTP_SECURITY="ssl"
+
+## Type:	yesno
+## Default:	yes
+# If set to yes the webmailer will not verify the SSL certificate of the mail server.
+# This is needed for internal mail servers using self signed certificates.
+CRANIX_MAIL_TRUST_ALL="yes"
+
+## Type:        string
+## Default:
 # The registration code of the CRANIX.
 CRANIX_REG_CODE="NOT YET REGISTERED"
 
