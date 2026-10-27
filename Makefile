@@ -4,7 +4,7 @@
 DESTDIR         = /
 SHARE           = $(DESTDIR)/usr/share/cranix/
 FILLUPDIR       = /usr/share/fillup-templates/
-PYTHONSITEARCH  = /usr/lib/python3.13/site-packages/
+PYTHONSITELIB   = /usr/lib/python3.13/site-packages/
 TOPACKAGE       = Makefile addons cups etc plugins python software sbin setup salt tools templates updates README.md
 HERE            = $(shell pwd)
 REPO            = ~/OSC/home:pvarkoly:CRANIX
@@ -15,7 +15,7 @@ install:
 	mkdir -p $(DESTDIR)/usr/lib/systemd/system-preset
 	mkdir -p $(DESTDIR)/usr/sbin/ 
 	mkdir -p $(DESTDIR)/$(FILLUPDIR)
-	mkdir -p $(DESTDIR)/$(PYTHONSITEARCH)
+	mkdir -p $(DESTDIR)/$(PYTHONSITELIB)
 	mkdir -p $(DESTDIR)/etc/apache2/vhosts.d/{admin,admin-ssl,cranix,cranix-ssl}
 	mkdir -p $(DESTDIR)/usr/lib/systemd/system/
 	mkdir -p $(DESTDIR)/srv/salt/_modules/
@@ -37,7 +37,7 @@ install:
 	#install -m 755   updates/*  $(SHARE)/updates/
 	rsync -a   salt/            $(DESTDIR)/srv/salt/
 	rsync -a   cups/            $(DESTDIR)/usr/share/cups/
-	rsync -a   python/          $(DESTDIR)/$(PYTHONSITEARCH)/cranix/
+	rsync -a   python/          $(DESTDIR)/$(PYTHONSITELIB)/cranix/
 	mv $(SHARE)/setup/gpg-pubkey-*.asc.key $(DESTDIR)/usr/lib/rpm/gnupg/keys/
 	find $(SHARE)/plugins/ $(SHARE)/tools/ -type f -exec chmod 755 {} \;	
 
