@@ -187,8 +187,7 @@ with open("/etc/kea/kea-dhcp4.conf","w") as cf:
 os.system("echo 'DROP DATABASE IF EXISTS kea_dhcp4'| mariadb")
 os.system("echo 'CREATE DATABASE kea_dhcp4'| mariadb")
 os.system(f"echo 'GRANT ALL ON kea_dhcp4.* TO \"keauser\"@\"localhost\" IDENTIFIED BY \"{password}\"'| mariadb")
-os.system("/usr/bin/systemctl enable kea-dhcp4.service")
-os.system("/usr/bin/systemctl restart kea-dhcp4.service")
+os.system("/usr/bin/systemctl enable -now kea-dhcp4.service")
 time.sleep(5)
 rooms = {}
 for room in json.load(os.popen('crx_api.sh GET rooms/all')):
