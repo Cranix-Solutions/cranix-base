@@ -31,6 +31,8 @@ rpm -e --nodeps $( rpm -qa 'ruby2*' )
 
 echo "======================================="
 echo "Switch to Network Manager"
+# NetworkManager-config-server is required as otherwise NM will immediately add connections for all interfaces, resulting in duplicates.
+# NetworkManager-config-server can be removed after the migration is done.
 zypper -n install wicked2nm NetworkManager || ( echo "==============Migration ERROR============="; echo "wicked2nm is not available. Migration is not possible."; exit 1 )
 
 # If NetworkManager-config-server is not available you can also manually add the drop-in configuration.
@@ -59,14 +61,6 @@ gpgcheck=0
 keeppackages=0
 " > /etc/zypp/repos.d/CRANIX.repo
 
-#zypper ar https://download.opensuse.org/distribution/leap/${NEW_VERSION}/repo/oss/ openLeap-oss
-#zypper ar https://download.opensuse.org/distribution/leap/${NEW_VERSION}/repo/non-oss/ openLeap-non-oss
-#zypper ar http://codecs.opensuse.org/openh264/openSUSE_Leap_16 openh264
-
-zypper ar https://download.opensuse.org/tumbleweed/repo/oss/ Tumbleweed-oss
-zypper ar https://download.opensuse.org/tumbleweed/repo/non-oss/ Tumbleweed-non-oss
-zypper ar https://download.opensuse.org/update/tumbleweed/ Tumbleweed-Update
-
 zypper refresh
 
 echo "======================================="
@@ -84,7 +78,7 @@ zypper -n dup --allow-vendor-change --no-recommends 2>&1 | tee /var/log/CRANIX-M
 if [ "${CRANIX_TYPE,,}" == "cephalix" ]; then
 	JAVA_API="cephalix-api"
         JAVA_LIB="/opt/cranix-java/lib/cephalix.jar"
-        JAVA_APPLICATION="de.cranix.api.CephalixxApplication"
+        JAVA_APPLICATION="de.cranix.api.CephalixApplication"
 else
 	JAVA_API="cranix-api"
         JAVA_LIB="/opt/cranix-java/lib/cranix.jar"
@@ -113,4 +107,3 @@ else
         echo "A support issue was created."
         echo "Do not restart the system!!!!"
 fi
-
