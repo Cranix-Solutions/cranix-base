@@ -185,7 +185,7 @@ CRANIX_PROXY=""
 CRANIX_BACKUP_SERVER=""
 
 ## Type:	string readonly
-# The default gateway of the server.
+# The network device for the transport network
 CRANIX_SERVER_EXT_DEVICE=""
 
 ## Type:	string readonly
