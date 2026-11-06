@@ -86,6 +86,7 @@ else
 fi
 
 if [ "$( rpm -q --qf %{VERSION} cranix-base )" != "15.6" ]; then
+	/usr/bin/systemctl set-default multi-user.target
 	/usr/bin/systemctl stop cron $JAVA_API
 	sleep 10
         /usr/bin/systemctl enable samba-ad
