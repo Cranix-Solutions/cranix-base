@@ -90,7 +90,7 @@ if [ "$( rpm -q --qf %{VERSION} cranix-base )" != "15.6" ]; then
 	/usr/bin/systemctl stop cron $JAVA_API
 	sleep 10
         /usr/bin/systemctl enable samba-ad
-        [ -e /etc/samba/smb-printserver.conf ] && /usr/bin/systemctl enable samba-printserver
+        /usr/bin/systemctl enable salt-master
         [ -e /etc/samba/smb-fileserver.conf ]  && /usr/bin/systemctl enable samba-fileserver
 	echo "DROP TABLE DefaultPrinter" | /usr/bin/mariadb CRX
 	echo "DROP TABLE AvailablePrinters" | /usr/bin/mariadb CRX
