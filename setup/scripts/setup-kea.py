@@ -131,7 +131,8 @@ kea_conf = {
         "hooks-libraries": [ 
                 { "library": "/usr/lib64/kea/hooks/libdhcp_mysql.so" },
                 { "library": "/usr/lib64/kea/hooks/libdhcp_host_cmds.so" },
-                { "library": "/usr/lib64/kea/hooks/libdhcp_class_cmds.so" }
+                { "library": "/usr/lib64/kea/hooks/libdhcp_class_cmds.so" },
+                { "library": "/usr/lib64/kea/hooks/libdhcp_lease_cmds.so" }
         ],
         "option-data": [
                 {
