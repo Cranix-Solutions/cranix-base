@@ -143,22 +143,19 @@ def read_kea_pools():
 
 def read_kea_leases(subnet_ids):
     """Returns the list of leases known by Kea for the given subnet ids."""
-    leases = []
-    for subnet_id in subnet_ids:
-        kea_command = {
-            "command": "lease4-get-all",
-            "service": [ "dhcp4" ],
-            "arguments": { "subnet-id": subnet_id }
-        }
-        try:
-            result = exec_kea_command(kea_command)
-        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as err:
-            print("ERROR: Cannot query the Kea DHCP server: {0}".format(err), file=sys.stderr)
-            sys.exit(1)
-        if result.get("result") != 0:
-            continue
-        leases.extend(result.get("arguments", {}).get("leases", []))
-    return leases
+    kea_command = {
+        "command": "lease4-get-all",
+        "service": [ "dhcp4" ],
+        "arguments": { "subnets": subnet_ids }
+    }
+    try:
+        result = exec_kea_command(kea_command)
+    except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as err:
+        print("ERROR: Cannot query the Kea DHCP server: {0}".format(err), file=sys.stderr)
+        sys.exit(1)
+    if result.get("result") != 0:
+        return []
+    return result.get("arguments", {}).get("leases", [])
 
 
 def read_registered_macs():
@@ -208,7 +205,7 @@ def print_table(clients):
     for row in rows:
         for i, value in enumerate(row):
             widths[i] = max(widths[i], len(value))
-    fmt = "  ".join("{0:<" + str(width) + "}" for width in widths)
+    fmt = "  ".join("{" + str(i) + ":<" + str(width) + "}" for i, width in enumerate(widths))
     print(fmt.format(*headers))
     print(fmt.format(*[ "-" * width for width in widths ]))
     for row in rows:
