@@ -43,6 +43,7 @@ install:
 
 dist: 
 	xterm -e git log --raw  &
+	rm -rf tools/__pycache__
 	if [ -e $(PACKAGE) ] ;  then rm -rf $(PACKAGE) ; fi   
 	mkdir $(PACKAGE)
 	for i in $(TOPACKAGE); do \
