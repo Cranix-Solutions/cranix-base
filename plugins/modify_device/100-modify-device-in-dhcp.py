@@ -87,24 +87,26 @@ dhcp_command = {
     }
 }
 result = exec_dhcp_command(dhcp_command)
-if result['result'] != 0:
-    with open(f"/var/adm/cranix/opentasks/110-modify-device-in-dhcp-{dev_id}.json","w") as f:
-        json.dump(dhcp_command, f, ensure_ascii=False, indent=4)
-    sys.exit(1)
-host = result["arguments"]["hosts"][0]
-host["hw-address"] = mac
-
-#Delete old entry
-dhcp_command = {
-    "command": "reservation-del",
-    "arguments": {
-        "subnet-id": host["subnet-id"],
-        "ip-address": ip,
-        "identifier-type": "ip-address",
-        "operation-target": "all"
+if result['result'] == 0:
+    #Delete old entry
+    dhcp_command = {
+        "command": "reservation-del",
+        "arguments": {
+            "subnet-id": host["subnet-id"],
+            "ip-address": ip,
+            "identifier-type": "ip-address",
+            "operation-target": "all"
+        }
     }
+    result = exec_dhcp_command(dhcp_command)
+
+host = {
+    "subnet-id": net_id,
+    "hw-address": mac,
+    "ip-address": ip,
+    "hostname": f"{name}.{cranixconfig.CRANIX_DOMAIN}",
+    "client-classes": [roomname, "known-devices-class"]
 }
-result = exec_dhcp_command(dhcp_command)
 
 #Add updated entry
 dhcp_command = {
@@ -127,25 +129,27 @@ if is_valid_ipv4(wlanip) and is_valid_mac_macaddress(wlanmac):
         }
     }
     result = exec_dhcp_command(dhcp_command)
-    if result['result'] != 0:
-        with open(f"/var/adm/cranix/opentasks/110-modify-device-in-dhcp-{dev_id}-wlan.json","w") as f:
-            json.dump(dhcp_command, f, ensure_ascii=False, indent=4)
-        sys.exit(1)
-    host = result["arguments"]["hosts"][0]
-    host["hw-address"] = wlanmac
-
-    #Delete old entry
-    dhcp_command = {
-        "command": "reservation-del",
-        "arguments": {
-            "subnet-id": host["subnet-id"],
-            "ip-address": wlanip,
-            "identifier-type": "ip-address",
-            "operation-target": "all"
+    if result['result'] == 0:
+        #Delete old entry
+        dhcp_command = {
+            "command": "reservation-del",
+            "arguments": {
+                "subnet-id": host["subnet-id"],
+                "ip-address": wlanip,
+                "identifier-type": "ip-address",
+                "operation-target": "all"
+            }
         }
-    }
-    result = exec_dhcp_command(dhcp_command)
+        result = exec_dhcp_command(dhcp_command)
 
+    host = {
+        "subnet-id": net_id,
+        "hw-address": wlanmac,
+        "ip-address": wlanip,
+        "hostname": f"{name}.{cranixconfig.CRANIX_DOMAIN}",
+        "client-classes": [roomname, "known-devices-class"]
+    }
+    
     #Add updated entry
     dhcp_command = {
         "command": "reservation-add",

@@ -111,7 +111,7 @@ function PreSetup (){
     sed -i s/^CRANIX_DOMAIN=.*/CRANIX_DOMAIN=\"$CRANIX_DOMAIN\"/ $sysconfig
     REALM=${CRANIX_DOMAIN^^}
 
-    echo "Setup internal network"
+    echo "Setup cranix-intern network"
     if [ ${CRANIX_SERVER} != ${CRANIX_NET_GATEWAY} ]; then
 	    INTERNAL_GATEWAY="ipv4.gateway ${CRANIX_NET_GATEWAY}"
     fi
@@ -124,17 +124,17 @@ function PreSetup (){
 	    ${INTERNAL_GATEWAY} ipv4.dns "127.0.0.1,8.8.8.8,8.8.4.4"
     nmcli connection up "cranix-intern"
 
-    echo "Setup external network"
+    echo "Setup cranix-extern network"
     LINKTYPE="ethernet"
     if [ ${CRANIX_SERVER_EXT_DEVICE/dummy/} != ${CRANIX_SERVER_EXT_DEVICE} ]; then
 	    LINKTYPE="dummy"
     fi
     if [ "${CRANIX_SERVER_EXT_DEVICE}" ]; then
 	    if [ ${CRANIX_SERVER_EXT_IP} == "auto" ]; then
-		nmcli connection add type $LINKTYPE con-name "cranix-external" ifname ${CRANIX_SERVER_EXT_DEVICE} ipv4.method auto
-		nmcli connection modify "cranix-external" ipv4.ignore-auto-dns yes
+		nmcli connection add type $LINKTYPE con-name "cranix-extern" ifname ${CRANIX_SERVER_EXT_DEVICE} ipv4.method auto
+		nmcli connection modify "cranix-extern" ipv4.ignore-auto-dns yes
 	    else
-		nmcli connection add type $LINKTYPE con-name "cranix-external" ifname ${CRANIX_SERVER_EXT_DEVICE} ipv4.method manual \
+		nmcli connection add type $LINKTYPE con-name "cranix-extern" ifname ${CRANIX_SERVER_EXT_DEVICE} ipv4.method manual \
 			ipv4.addresses ${CRANIX_SERVER_EXT_IP}/${CRANIX_SERVER_EXT_NETMASK} ipv4.gateway ${CRANIX_SERVER_EXT_GW}
 	    fi
     fi
@@ -179,8 +179,7 @@ function SetupSamba (){
 
     ########################################################################
     log " - Start samba service"
-    /usr/bin/systemctl enable samba-ad.service
-    /usr/bin/systemctl restart samba-ad.service
+    /usr/bin/systemctl enable --now samba-ad.service
 
     ########################################################################
     log " - Setup samba private krbconf to kerberos conf"
@@ -329,8 +328,7 @@ function SetupFileserver () {
     else
         net ADS JOIN -s /etc/samba/smb-fileserver.conf -U register%"$registerpw"
     fi
-    systemctl enable samba-fileserver
-    systemctl start  samba-fileserver
+    systemctl enable --now samba-fileserver
     log "End Setup Fileserver"
 }
 
@@ -487,8 +485,7 @@ function SetupApi (){
     /bin/chmod 600 /root/.ssh/authorized_keys
     ########################################################################
     log "Start and setup mariadb"
-    /usr/bin/systemctl start  mariadb
-    /usr/bin/systemctl enable mariadb
+    /usr/bin/systemctl enable --now mariadb
     ########################################################################
     log "Make mariadb secure"
     cd /root
@@ -531,15 +528,15 @@ chmod 600 /root/.my.cnf
         cephalix)
             mariadb -f CRX < /opt/cranix-java/data/school-inserts.sql
             mariadb -f CRX < /opt/cranix-java/data/cephalix-inserts.sql
-            /usr/bin/systemctl start cephalix-api
+            /usr/bin/systemctl enable --now cephalix-api
 	;;
         business)
             mariadb -f CRX < /opt/cranix-java/data/business-inserts.sql
-            /usr/bin/systemctl start cranix-api
+            /usr/bin/systemctl enable --now cranix-api
 	;;
 	*)
             mariadb -f CRX < /opt/cranix-java/data/school-inserts.sql
-            /usr/bin/systemctl start cranix-api
+            /usr/bin/systemctl enable --now cranix-api
     esac
     sleep 3
 
@@ -599,8 +596,7 @@ function PostSetup (){
     fi
     mkdir -p /srv/www/cranix/
     sed "s/#DOMAIN#/$CRANIX_DOMAIN/g" /usr/share/cranix/setup/templates/cranix-index.html > /srv/www/cranix/index.html
-    /usr/bin/systemctl enable apache2
-    /usr/bin/systemctl start  apache2
+    /usr/bin/systemctl enable --now apache2
 
     ########################################################################
     log "Setup firewall"
@@ -627,8 +623,6 @@ URL=https://admin.$CRANIX_DOMAIN
     /usr/lib/systemd-presets-branding/branding-preset-states save
     NAME="CRANIX"
     if [ "$CRANIX_TYPE" = "cephalix"  ]; then
-        /usr/bin/systemctl enable  cephalix-api
-        /usr/bin/systemctl disable cranix-api
 	NAME="CEPHALIX"
     fi
     echo 'stricthostkeychecking no' > /root/.ssh/config
@@ -672,6 +666,14 @@ unset _bred _sgr0
     log "Install some additional packages"
     zypper -n install cranix-web
     zypper -n install cranix-clone
+
+
+    ########################################################################
+    log "Adapt run level"
+    /usr/bin/systemctl enable --now sssd.service
+    /usr/bin/systemctl enable --now salt-master.service
+    /usr/bin/systemctl enable --now crx_salt_event_watcher.service
+
 
     log "End PostSetup"
 }

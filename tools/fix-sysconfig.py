@@ -9,7 +9,6 @@ new_services = (
         'chronyd',
         'samba-ad',
         'samba-fileserver',
-        'samba-printserver',
         'cranix-api',
         'crx_salt_event_watcher'
         )
@@ -34,7 +33,7 @@ cranix_conf = BashConfigParser(config_file='/etc/sysconfig/cranix')
 
 for key in fillup_template.variables:
     if key in cranix_conf.variables:
-        fillup_template.set(key, fillup_template.get(key))
+        fillup_template.set(key, cranix_conf.get(key))
 services=cranix_conf.get('CRANIX_MONITOR_SERVICES').split()
 for i in old_services:
     if i in services:

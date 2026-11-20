@@ -7,6 +7,10 @@ import tkinter as tk
 from tkinter import ttk
 from bashconfigparser import BashConfigParser
 
+SYSCONFIG_FILE = "/etc/sysconfig/cranix"
+# Values which are only placeholders in the sysconfig file and not real defaults
+SYSCONFIG_PLACEHOLDERS = ("", "NOT YET REGISTERED")
+
 def netmask_to_cidr(netmask):
     return ipaddress.IPv4Network(f'0.0.0.0/{netmask}').prefixlen
 
@@ -46,6 +50,71 @@ def list_physical_interfaces():
     interfaces.append('dummy0')
     return interfaces
 
+def read_sysconfig() -> dict:
+    # Reads the actual values from /etc/sysconfig/cranix
+    if not os.path.exists(SYSCONFIG_FILE):
+        return {}
+    try:
+        conf = BashConfigParser(config_file=SYSCONFIG_FILE)
+        return conf.get_all_variables()
+    except Exception:
+        return {}
+
+def config_value(values: dict, key: str, fallback: str = "") -> str:
+    # Returns the value from the sysconfig file or the fallback if it is not set
+    value = values.get(key, "").strip()
+    if value in SYSCONFIG_PLACEHOLDERS:
+        return fallback
+    return value
+
+def find_interface(device: str) -> str:
+    # The selection works with the complete interface line ("eth0 <mac> <ip> <netmask>")
+    for line in interfaces:
+        if line.split()[0] == device:
+            return line
+    return device
+
+def get_default_gateway(device: str = "") -> str:
+    # Returns the gateway of the current default route.
+    # A default route via the given device is preferred.
+    fallback = ""
+    for line in os.popen("ip -4 route show default 2>/dev/null").read().splitlines():
+        fields = line.split()
+        if "via" not in fields:
+            continue
+        gateway = fields[fields.index("via") + 1]
+        if not ist_valide_ipv4(gateway):
+            continue
+        if device and "dev" in fields and fields[fields.index("dev") + 1] == device:
+            return gateway
+        if fallback == "":
+            fallback = gateway
+    if fallback != "":
+        return fallback
+    # Fallback: evaluate /proc/net/route
+    # Iface Destination Gateway Flags ... (Gateway is stored in little endian hex)
+    try:
+        with open("/proc/net/route", "r") as f:
+            routes = f.readlines()[1:]
+    except OSError:
+        return ""
+    gateways = []
+    for line in routes:
+        fields = line.split()
+        if len(fields) < 4 or fields[1] != "00000000":
+            continue
+        if not int(fields[3], 16) & 0x0002: # RTF_GATEWAY
+            continue
+        try:
+            gateway = str(ipaddress.IPv4Address(int(fields[2], 16).to_bytes(4, "little")))
+        except ValueError:
+            continue
+        gateways.append((fields[0], gateway))
+    for iface, gateway in gateways:
+        if device and iface == device:
+            return gateway
+    return gateways[0][1] if gateways else ""
+
 def showmessage(text: str):
     popup = tk.Toplevel(root)
     popup.title(_("Message"))
@@ -75,6 +144,13 @@ def showerror(text: str, description: str = ""):
         d.pack()
     b = tk.Button(popup, text="OK", command=confirm)
     b.pack()
+
+def set_entry_value(entry: tk.Entry, value: str, readonly: bool = False):
+    entry.config(state="normal")
+    entry.delete(0, tk.END)
+    entry.insert(0, value)
+    if readonly:
+        entry.config(state="readonly")
 
 def open_selection_popup(options, variable: tk.Entry, post: bool = False):
     # 1. Das Popup-Fenster (Toplevel)
@@ -129,18 +205,17 @@ def open_selection_popup(options, variable: tk.Entry, post: bool = False):
         if selected_value != "free_entry":
             variable.insert(0, selected_value)
             variable.config(state="readonly")
-        if post:
-            try:
-                ext_ip = entry_ext_device.get().split()[2]
-                ext_nm = entry_ext_device.get().split()[3]
-                entry_ext_ip.delete(0, tk.END)
-                entry_ext_ip.insert(0, ext_ip)
-                entry_ext_netmask.config(state="normal")
-                entry_ext_netmask.delete(0, tk.END)
-                entry_ext_netmask.insert(0, ext_nm)
-                entry_ext_netmask.config(state="readonly")
-            except:
-                pass
+        if post and selected_value != "free_entry":
+            fields = selected_value.split()
+            if len(fields) > 3:
+                # Set IP address and netmask of the selected external device
+                set_entry_value(entry_ext_ip, fields[2])
+                set_entry_value(entry_ext_netmask, fields[3], True)
+            if fields:
+                # Set the actual default route as external gateway
+                gateway = get_default_gateway(fields[0])
+                if gateway != "":
+                    set_entry_value(entry_ext_gateway, gateway)
         popup.destroy()
 
     btn_ok = tk.Button(popup, text="Auswahl übernehmen", command=confirm, bg="#4CAF50", fg="white")
@@ -303,20 +378,34 @@ entry_ext_device: tk.Entry
 entry_ext_gateway: tk.Entry
 
 if __name__ == '__main__':
+    defaults = read_sysconfig()
+
+    def default_netmask(key: str, fallback: str) -> str:
+        # The netmask can be stored as CIDR prefix or as dotted netmask
+        value = config_value(defaults, key, fallback)
+        if "." in value:
+            try:
+                return str(netmask_to_cidr(value))
+            except ValueError:
+                return fallback
+        return value
+
     root = tk.Tk()
     root.title("CRANIX Configuration")
     root.geometry("640x400")
     # Fields on the left side
     entry_name = create_field("Institute Name:", 0, 0)
+    entry_name.insert(0, config_value(defaults, "CRANIX_NAME"))
     entry_domain = create_field("Domain Name:", 1, 0)
+    entry_domain.insert(0, config_value(defaults, "CRANIX_DOMAIN"))
 
     btn_type = tk.Button(root, text=_("Select Institute Type"), command=open_type_selection).grid(row=4, column=0, sticky="w", padx=5, pady=(10,0))
     entry_type   = tk.Entry(root, width=width)
     entry_type.grid(row=5, column=0)
-    entry_type.insert(0,'gymnasium')
-    entry_type.config(state="readonly")
+    set_entry_value(entry_type, config_value(defaults, "CRANIX_TYPE", "gymnasium"), True)
 
     entry_regcode = create_field("Registration Code:", 3, 0)
+    entry_regcode.insert(0, config_value(defaults, "CRANIX_REG_CODE"))
     entry_pw = create_field("Administrator Password:", 4, 0, is_password=True)
     entry_pw2 = tk.Entry(root, width=width, show="*")
     entry_pw2.grid(row=10, column=0)
@@ -325,34 +414,36 @@ if __name__ == '__main__':
     btn_int_device = tk.Button(root, text=_("Select Internal Device"), command=open_intern_device_selection).grid(row=0, column=1, sticky="w", padx=5, pady=(10,0))
     entry_device = tk.Entry(root, width=width, state="readonly")
     entry_device.grid(row=1, column=1)
+    set_entry_value(entry_device, find_interface(config_value(defaults, "CRANIX_INTERNAL_DEVICE")), True)
 
     btn_ipaddress = tk.Button(root, text=_("Select Internal Network"), command=open_network_selection).grid(row=2, column=1, sticky="w", padx=5, pady=(10,0))
     entry_network = tk.Entry(root, width=width)
     entry_network.grid(row=3, column=1)
-    entry_network.insert(0,"172.16.0.0")
+    entry_network.insert(0, config_value(defaults, "CRANIX_NETWORK", "172.16.0.0"))
     entry_network.config(state="readonly")
 
     btn_netmask = tk.Button(root, text=_("Netmask"), command=open_netmask_selection).grid(row=2, column=2, sticky="w", padx=(0,5), pady=(10,0))
     entry_netmask = tk.Entry(root, width=10)
     entry_netmask.grid(row=3, column=2, sticky="w")
-    entry_netmask.insert(0,"16")
+    entry_netmask.insert(0, default_netmask("CRANIX_NETMASK", "16"))
     entry_netmask.config(state="readonly")
 
     btn_ext_device = tk.Button(root, text=_("Select External Device"), command=open_ext_device_selection).grid(row=4, column=1, sticky="w", padx=5, pady=(10,0))
     entry_ext_device = tk.Entry(root, width=width, state="readonly")
     entry_ext_device.grid(row=5, column=1)
+    set_entry_value(entry_ext_device, find_interface(config_value(defaults, "CRANIX_SERVER_EXT_DEVICE")), True)
 
     entry_ext_ip = create_field("External IP:", 3, 1)
-    entry_ext_ip.insert(0, "192.168.178.2")
+    entry_ext_ip.insert(0, config_value(defaults, "CRANIX_SERVER_EXT_IP", "192.168.178.2"))
 
     btn_ext_netmask = tk.Button(root, text=_("Netmask"), command=open_ext_netmask_selection).grid(row=6, column=2, sticky="w", padx=(0,5), pady=(10,0))
     entry_ext_netmask = tk.Entry(root, width=10)
     entry_ext_netmask.grid(row=7, column=2, sticky="w")
-    entry_ext_netmask.insert(0,"24")
+    entry_ext_netmask.insert(0, default_netmask("CRANIX_SERVER_EXT_NETMASK", "24"))
     entry_ext_netmask.config(state="readonly")
 
     entry_ext_gateway = create_field("External Gateway:", 4, 1)
-    entry_ext_gateway.insert(0,"192.168.178.1")
+    entry_ext_gateway.insert(0, config_value(defaults, "CRANIX_SERVER_EXT_GW", "192.168.178.1"))
     # Last button
     btn_save  = tk.Button(root, text=_("Save"), command=check_values)
     btn_save.grid(row=12, column=0, pady=15)

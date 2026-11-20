@@ -1,0 +1,13 @@
+[Unit]
+Description=Generate X11 Keyboard Config from vconsole.conf
+DefaultDependencies=no
+After=systemd-vconsole-setup.service
+Before=display-manager.service xdm.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/share/cranix/tools/generate-x11-keyboard.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
