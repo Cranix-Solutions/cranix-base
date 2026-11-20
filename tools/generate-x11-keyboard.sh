@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
 # Generates /etc/X11/xorg.conf.d/00-keyboard.conf from /etc/vconsole.conf
 # Requires root privileges to write to /etc/X11/xorg.conf.d/
