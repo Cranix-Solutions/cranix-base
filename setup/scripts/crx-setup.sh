@@ -149,6 +149,7 @@ ${CRANIX_PRINTSERVER} printserver.${CRANIX_DOMAIN} printserver
 ${CRANIX_MAILSERVER} mailserver.${CRANIX_DOMAIN} mailserver
 ${CRANIX_PROXY} proxy.${CRANIX_DOMAIN} proxy
 ${CRANIX_SERVER_EXT_IP} extip
+185.163.116.226 repo.cephalix.eu
     " >> /etc/hosts
     log "End PreSetup"
 }
@@ -672,6 +673,8 @@ unset _bred _sgr0
     /usr/bin/systemctl enable --now salt-master.service
     /usr/bin/systemctl enable --now crx_salt_event_watcher.service
 
+    ########################################################################
+    sed -i /repo.cephalix.eu/d /etc/hosts
 
     log "End PostSetup"
 }
