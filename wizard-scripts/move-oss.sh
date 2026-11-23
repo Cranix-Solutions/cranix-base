@@ -3,7 +3,7 @@
 vi /etc/hosts
 
 ssh old-oss "systemctl stop mysql samba samba-printserver  cranix-api cups"
-systemctl stop mysql samba samba-printserver  cranix-api cups
+systemctl stop mysql samba samba-printserver  cranix-api-provider cups
 mv /root/.my.cnf /root/.my.cnf-orig
 mv /var/lib/samba/ /var/lib/samba-orig
 mv /var/lib/mysql /var/lib/mysql-orig
@@ -25,5 +25,5 @@ crx_api.sh PUT softwares/saveStates
 nohup rsync -aAv old-oss:/srv/itool/ /srv/itool/ &
 nohup rsync -aAv old-oss:/home/ /home/ &
 
-systemctl start mysql samba samba-printserver  cranix-api cups
+systemctl start mysql samba samba-printserver  cranix-api-provider cups
 

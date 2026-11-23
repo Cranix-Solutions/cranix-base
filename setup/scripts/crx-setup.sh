@@ -528,16 +528,14 @@ chmod 600 /root/.my.cnf
         cephalix)
             mariadb -f CRX < /opt/cranix-java/data/school-inserts.sql
             mariadb -f CRX < /opt/cranix-java/data/cephalix-inserts.sql
-            /usr/bin/systemctl enable --now cephalix-api
 	;;
         business)
             mariadb -f CRX < /opt/cranix-java/data/business-inserts.sql
-            /usr/bin/systemctl enable --now cranix-api
 	;;
 	*)
             mariadb -f CRX < /opt/cranix-java/data/school-inserts.sql
-            /usr/bin/systemctl enable --now cranix-api
     esac
+    /usr/bin/systemctl enable --now cranix-api-provider
     sleep 3
 
     ########################################################################

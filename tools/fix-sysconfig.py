@@ -9,15 +9,17 @@ new_services = (
         'chronyd',
         'samba-ad',
         'samba-fileserver',
-        'cranix-api',
+        'cranix-api-provider',
         'crx_salt_event_watcher'
         )
 # old services to remove
 old_services = (
+        'cephalix-api',
+        'cranix-api',
         'ntpd',
-        'samba',
         'oss-api',
-        'oss_salt_event_watcher'
+        'oss_salt_event_watcher',
+        'samba'
         )
 
 #Create backup directory

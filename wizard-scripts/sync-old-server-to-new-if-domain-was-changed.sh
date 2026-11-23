@@ -17,7 +17,7 @@ ssh new-cranix "mysqldump --databases CRX > CRX-orig.sql"
 mysqldump --databases CRX > CRX.sql
 scp CRX.sql new-cranix:/tmp/import-old/
 ssh new-cranix "mysql < /tmp/import-old/CRX.sql"
-ssh new-cranix "systemctl restart cranix-api"
+ssh new-cranix "systemctl restart cranix-api-provider"
 sleep 1
 ssh new-cranix /usr/share/cranix/tools/wait-for-api.sh
 ssh new-cranix "crx_api.sh PUT devices/refreshConfig"

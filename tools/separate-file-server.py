@@ -79,7 +79,7 @@ if not next_ip:
     next_ip_json = json.load(os.popen('/usr/sbin/crx_api.sh GET rooms/1/availableIPAddresses'))
     next_ip      = next_ip_json[0]
     os.system("echo \"INSERT INTO Devices VALUES(NULL,1,1,NULL,'fileserver','{0}',NULL,'','',0,0,'','','',0);\" | mariadb CRX".format(next_ip))
-    os.system('/usr/bin/systemctl restart cranix-api.service')
+    os.system('/usr/bin/systemctl restart cranix-api-provider.service')
 
 print('Activate the new IP-Address')
 print('ip addr add {0}/{1} dev {2}'.format( next_ip,cranixconfig.CRANIX_NETMASK,device ))
