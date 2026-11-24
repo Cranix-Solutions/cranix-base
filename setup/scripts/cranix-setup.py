@@ -21,6 +21,29 @@ def ist_valide_ipv4(ip) -> bool:
     except ValueError:
         return False
 
+def ist_valide_domain(domain: str) -> bool:
+    # Checks the syntax of a DNS domain name (RFC 1035/1123).
+    # The name must consist of at least two labels separated by dots.
+    # A label may contain letters, digits and hyphens, must not start or
+    # end with a hyphen and must not be longer than 63 characters.
+    # The complete name must not be longer than 253 characters.
+    if domain == "" or len(domain) > 253:
+        return False
+    labels = domain.split(".")
+    if len(labels) < 2:
+        return False
+    for label in labels:
+        if len(label) == 0 or len(label) > 63:
+            return False
+        if label[0] == "-" or label[-1] == "-":
+            return False
+        if not all(c.isascii() and (c.isalnum() or c == "-") for c in label):
+            return False
+    # The top level domain must not be purely numeric
+    if labels[-1].isdigit():
+        return False
+    return True
+
 def _(text):
     if language in translation:
         if text in translation[language]:
@@ -270,6 +293,9 @@ def check_values() -> bool:
     domain_name = entry_domain.get()
     if domain_name == "":
         showerror("Domain Name must not be empty")
+        return False
+    if not ist_valide_domain(domain_name):
+        showerror("Domain Name is not valide.", "Please enter a valid DNS domain name, e.g. example.com.")
         return False
     inst_type = entry_type.get()
     reg_code = entry_regcode.get()
