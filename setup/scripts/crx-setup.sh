@@ -86,6 +86,39 @@ function is_valid_mac() {
     [[ "${1,,}" != "ff:ff:ff:ff:ff:ff" ]]
 }
 
+function has_ipv4_address() {
+    ip -4 -o addr show dev "$1" 2>/dev/null | grep -q " inet "
+}
+
+function detect_network_devices() {
+    # If none of the network devices are configured try to detect them.
+    # The device which has an IP address will be the external one, the other one the internal.
+    if [ "${CRANIX_INTERNAL_DEVICE}" -o "${CRANIX_SERVER_EXT_DEVICE}" ]; then
+        return
+    fi
+    local dev
+    for dev in /sys/class/net/*; do
+        dev=${dev##*/}
+        # Skip the loopback and not physical devices.
+        if [ "$dev" = "lo" -o ! -e "/sys/class/net/$dev/device" ]; then
+            continue
+        fi
+        if has_ipv4_address "$dev"; then
+            CRANIX_SERVER_EXT_DEVICE=${CRANIX_SERVER_EXT_DEVICE:-$dev}
+        else
+            CRANIX_INTERNAL_DEVICE=${CRANIX_INTERNAL_DEVICE:-$dev}
+        fi
+    done
+    if [ "${CRANIX_INTERNAL_DEVICE}" -a "${CRANIX_SERVER_EXT_DEVICE}" ]; then
+        log "   Detected internal device: ${CRANIX_INTERNAL_DEVICE}"
+        log "   Detected external device: ${CRANIX_SERVER_EXT_DEVICE}"
+        sed -i "s/^CRANIX_INTERNAL_DEVICE=.*/CRANIX_INTERNAL_DEVICE=\"${CRANIX_INTERNAL_DEVICE}\"/" $sysconfig
+        sed -i "s/^CRANIX_SERVER_EXT_DEVICE=.*/CRANIX_SERVER_EXT_DEVICE=\"${CRANIX_SERVER_EXT_DEVICE}\"/" $sysconfig
+    else
+        log "   Could not detect the internal and external network device"
+    fi
+}
+
 function PreSetup (){
 
     ########################################################################
@@ -116,6 +149,9 @@ function PreSetup (){
     CRANIX_DOMAIN=${CRANIX_DOMAIN,,}
     sed -i s/^CRANIX_DOMAIN=.*/CRANIX_DOMAIN=\"$CRANIX_DOMAIN\"/ $sysconfig
     REALM=${CRANIX_DOMAIN^^}
+
+    log " - Detect the network devices if not configured"
+    detect_network_devices
 
     echo "Setup cranix-intern network"
     if [ ${CRANIX_SERVER} != ${CRANIX_NET_GATEWAY} ]; then
