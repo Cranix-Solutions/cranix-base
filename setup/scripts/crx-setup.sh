@@ -80,6 +80,12 @@ function log() {
     fi
 }
 
+function is_valid_mac() {
+    [[ "$1" =~ ^([[:xdigit:]]{2}:){5}[[:xdigit:]]{2}$ ]] &&
+    [[ "${1,,}" != "00:00:00:00:00:00" ]] &&
+    [[ "${1,,}" != "ff:ff:ff:ff:ff:ff" ]]
+}
+
 function PreSetup (){
 
     ########################################################################
@@ -119,7 +125,11 @@ function PreSetup (){
     if [ ${CRANIX_INTERNAL_DEVICE/dummy/} != ${CRANIX_INTERNAL_DEVICE} ]; then
 	    LINKTYPE="dummy"
     fi
-    nmcli connection add type $LINKTYPE con-name "cranix-intern" ifname ${CRANIX_INTERNAL_DEVICE} ipv4.method manual \
+    IFTYPE="ifname"
+    if is_valid_mac ${CRANIX_INTERNAL_DEVICE}; then
+        IFTYPE="802-3-ethernet.mac-address"
+    fi
+    nmcli connection add type $LINKTYPE con-name "cranix-intern" ${IFTYPE} ${CRANIX_INTERNAL_DEVICE} ipv4.method manual \
 	    ipv4.addresses ${CRANIX_SERVER}/${CRANIX_NETMASK},${CRANIX_FILESERVER}/${CRANIX_NETMASK},${CRANIX_PRINTSERVER}/${CRANIX_NETMASK},${CRANIX_MAILSERVER}/${CRANIX_NETMASK},${CRANIX_PROXY}/${CRANIX_NETMASK} \
 	    ${INTERNAL_GATEWAY} ipv4.dns "127.0.0.1,8.8.8.8,8.8.4.4"
     nmcli connection up "cranix-intern"
@@ -129,12 +139,16 @@ function PreSetup (){
     if [ ${CRANIX_SERVER_EXT_DEVICE/dummy/} != ${CRANIX_SERVER_EXT_DEVICE} ]; then
 	    LINKTYPE="dummy"
     fi
+    IFTYPE="ifname"
+    if is_valid_mac ${CRANIX_SERVER_EXT_DEVICE}; then
+        IFTYPE="802-3-ethernet.mac-address"
+    fi
     if [ "${CRANIX_SERVER_EXT_DEVICE}" ]; then
 	    if [ ${CRANIX_SERVER_EXT_IP} == "auto" ]; then
-		nmcli connection add type $LINKTYPE con-name "cranix-extern" ifname ${CRANIX_SERVER_EXT_DEVICE} ipv4.method auto
+		nmcli connection add type $LINKTYPE con-name "cranix-extern" ${IFTYPE} ${CRANIX_SERVER_EXT_DEVICE} ipv4.method auto
 		nmcli connection modify "cranix-extern" ipv4.ignore-auto-dns yes
 	    else
-		nmcli connection add type $LINKTYPE con-name "cranix-extern" ifname ${CRANIX_SERVER_EXT_DEVICE} ipv4.method manual \
+		nmcli connection add type $LINKTYPE con-name "cranix-extern" ${IFTYPE} ${CRANIX_SERVER_EXT_DEVICE} ipv4.method manual \
 			ipv4.addresses ${CRANIX_SERVER_EXT_IP}/${CRANIX_SERVER_EXT_NETMASK} ipv4.gateway ${CRANIX_SERVER_EXT_GW}
 	    fi
     fi
