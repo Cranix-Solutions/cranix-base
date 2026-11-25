@@ -467,7 +467,7 @@ function SetupApi (){
     log "Install the right Api package"
     if [ ${CRANIX_TYPE,,} == "cephalix" ]; then
 	    zypper -n install cephalix-java cephalix-base
-	    JAVA_LIB="/opt/cranix-java/lib/cranix.jar"
+	    JAVA_LIB="/opt/cranix-java/lib/cephalix.jar"
 	    JAVA_APPLICATION="de.cranix.api.CephalixxApplication"
     else
 	    zypper -n install cranix-java
